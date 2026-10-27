@@ -492,14 +492,75 @@ def execute_coffee_python_analysis(python_code: str) -> dict:
         return {"error": f"Python execution error: {str(e)}"}
 
 
+# --- Specialized Sub-Agents ---
+
+nutritionist_agent = Agent(
+    name="nutrition_analyst_agent",
+    description="Specialist agent for beverage nutritional analytics, Starbucks macro data, caffeine metrics, and Python data calculations.",
+    model=Gemini(
+        model=MODEL,
+        retry_options=types.HttpRetryOptions(attempts=3),
+    ),
+    instruction=(
+        "You are the Nutrition & Analytics Specialist for the coffee concierge. "
+        "You analyze Starbucks and artisan beverage databases using SQL and Python. "
+        "Always calculate exact metrics (caffeine-to-calorie ratios, sugar contents, dairy versus plant milk comparisons). "
+        "Provide clear, informative tables and summaries."
+    ),
+    tools=[
+        query_coffee_analytics_db,
+        execute_coffee_python_analysis,
+    ],
+)
+
+order_logistics_agent = Agent(
+    name="order_logistics_agent",
+    description="Specialist agent for order processing, Firestore tracking, store locations, and address geocoding.",
+    model=Gemini(
+        model=MODEL,
+        retry_options=types.HttpRetryOptions(attempts=3),
+    ),
+    instruction=(
+        "You are the Order & Logistics Specialist for the coffee shop. "
+        "You manage customer orders, confirm order details into Firestore, track preparation status, "
+        "and find nearby cafes or geocode customer delivery destinations."
+    ),
+    tools=[
+        place_order,
+        get_order_status,
+        geocode_address,
+        find_nearby_places,
+    ],
+)
+
+sommelier_guide_agent = Agent(
+    name="coffee_sommelier_agent",
+    description="Specialist agent for authentic coffee brewing guides, drink origins, ingredients, and international currency conversions.",
+    model=Gemini(
+        model=MODEL,
+        retry_options=types.HttpRetryOptions(attempts=3),
+    ),
+    instruction=(
+        "You are the Coffee Sommelier and Brewing Specialist. "
+        "You explain coffee history, recipes, ratios, brewing techniques, and convert pricing to international currencies."
+    ),
+    tools=[
+        lookup_coffee_guide,
+        convert_currency,
+        get_weather,
+        get_current_time,
+    ],
+)
+
+
 ROLE_DESCRIPTION = (
-    "You are the Artisan Coffee Concierge, an AI agent for a specialty coffee shop. "
-    "You help customers browse artisan coffee drinks and fresh bakery items, answer questions about flavor notes, "
-    "perform detailed nutritional, calorie, and caffeine data analysis on our Starbucks beverage database using SQL (query_coffee_analytics_db) or Python (execute_coffee_python_analysis), "
-    "generate images of menu items, find nearby cafés and geocode customer delivery addresses, "
-    "look up coffee brewing guides, convert prices to international currencies, "
-    "calculate complex recipes, metrics, or nutritional ratios by executing Python code safely in your sandbox, "
-    "place custom orders, and check order statuses using your tools. "
+    "You are the Artisan Coffee Concierge Orchestrator, leading an expert multi-agent team for a specialty coffee shop. "
+    "You interact warmly with customers, browse artisan coffee drinks and fresh bakery items, answer questions about flavor notes, "
+    "and generate images of menu items using generate_item_image. "
+    "You coordinate with your specialized sub-agents: "
+    "- Delegate deep nutritional analysis, caffeine stats, and Python macros to nutrition_analyst_agent. "
+    "- Delegate order placement, tracking, delivery geocoding, and store finding to order_logistics_agent. "
+    "- Delegate brewing guides, recipe history, and currency conversions to coffee_sommelier_agent. "
     "MEMORY & ALLERGIES POLICY: "
     "You must remember all user allergies, dietary restrictions, food sensitivities, and medical dietary requirements. "
     "Whenever a user mentions an allergy or dietary restriction, acknowledge it and ensure it is remembered in memory. "
@@ -535,19 +596,24 @@ root_agent = Agent(
     code_executor=AgentEngineSandboxCodeExecutor(
         sandbox_resource_name=SANDBOX_RESOURCE_NAME
     ),
+    sub_agents=[
+        nutritionist_agent,
+        order_logistics_agent,
+        sommelier_guide_agent,
+    ],
     tools=[
         list_menu_items,
         get_menu_item_details,
+        generate_item_image,
+        load_memory,
         query_coffee_analytics_db,
         execute_coffee_python_analysis,
-        generate_item_image,
+        place_order,
+        get_order_status,
         geocode_address,
         find_nearby_places,
         lookup_coffee_guide,
         convert_currency,
-        load_memory,
-        place_order,
-        get_order_status,
         get_weather,
         get_current_time,
     ],

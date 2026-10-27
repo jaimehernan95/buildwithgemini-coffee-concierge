@@ -392,9 +392,110 @@ def generate_item_image(item_name: str, tool_context: ToolContext) -> dict:
         return {"error": f"Failed to generate and upload image: {str(e)}"}
 
 
+def query_coffee_analytics_db(sql_query: str) -> dict:
+    """Execute a SQL query against the Starbucks beverage and nutritional analytics database.
+    Table: starbucks_drinks
+    Columns:
+      - id (INTEGER)
+      - beverage_name (TEXT, e.g. 'Caffe Latte', 'Caramel Macchiato', 'Cold Brew')
+      - category (TEXT, e.g. 'Espresso', 'Cold Brew', 'Frappuccino', 'Brewed Coffee', 'Tea', 'Refresher')
+      - size (TEXT: 'Tall', 'Grande', 'Venti')
+      - milk_type (TEXT: '2% Milk', 'Whole Milk', 'Oat Milk', 'Almond Milk', 'Cream', 'None')
+      - calories (INTEGER)
+      - caffeine_mg (INTEGER)
+      - total_fat_g (REAL)
+      - sugar_g (INTEGER)
+      - protein_g (INTEGER)
+      - price_usd (REAL)
+
+    Args:
+        sql_query: A SQL SELECT statement (e.g. 'SELECT beverage_name, calories, caffeine_mg FROM starbucks_drinks WHERE category = "Cold Brew"').
+
+    Returns:
+        A dictionary with the query columns, returned rows, and count.
+    """
+    db_file = os.path.join(os.path.dirname(__file__), "starbucks_analytics.db")
+    if not os.path.exists(db_file):
+        import sqlite3
+        return {"error": "Analytics database not found."}
+
+    import sqlite3
+    query = sql_query.strip()
+    if not query.lower().startswith("select"):
+        return {"error": "Only SELECT queries are permitted for safety."}
+
+    try:
+        conn = sqlite3.connect(db_file)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(query)
+        rows = cur.fetchall()
+        result = [dict(r) for r in rows[:50]]
+        conn.close()
+        return {
+            "success": True,
+            "query": query,
+            "count": len(result),
+            "rows": result,
+        }
+    except Exception as e:
+        return {"error": f"SQL execution error: {str(e)}"}
+
+
+def execute_coffee_python_analysis(python_code: str) -> dict:
+    """Execute custom Python analysis code on the Starbucks beverage dataset in-memory.
+    Pre-injected variable:
+      `drinks_df`: a pandas DataFrame containing all Starbucks beverages (columns: beverage_name, category, size, milk_type, calories, caffeine_mg, total_fat_g, sugar_g, protein_g, price_usd).
+    Assign your final output to a variable named `result` (can be dict, list, scalar, or string).
+
+    Args:
+        python_code: Python code snippet performing data analysis, statistics, or filtering.
+
+    Returns:
+        A dictionary with the evaluation result and execution status.
+    """
+    import io
+    import sys
+    import pandas as pd
+    import sqlite3
+
+    db_file = os.path.join(os.path.dirname(__file__), "starbucks_analytics.db")
+    try:
+        conn = sqlite3.connect(db_file)
+        drinks_df = pd.read_sql_query("SELECT * FROM starbucks_drinks", conn)
+        conn.close()
+
+        local_vars = {"drinks_df": drinks_df, "pd": pd}
+        old_stdout = sys.stdout
+        redirected_output = io.StringIO()
+        sys.stdout = redirected_output
+
+        exec(python_code, globals(), local_vars)
+
+        sys.stdout = old_stdout
+        stdout_str = redirected_output.getvalue().strip()
+        analysis_result = local_vars.get("result", stdout_str or "Execution finished without explicit result variable.")
+
+        # If result is DataFrame or Series, convert to json-friendly structure
+        if isinstance(analysis_result, pd.DataFrame):
+            analysis_result = analysis_result.to_dict(orient="records")
+        elif isinstance(analysis_result, pd.Series):
+            analysis_result = analysis_result.to_dict()
+
+        return {
+            "success": True,
+            "output": analysis_result,
+            "stdout": stdout_str,
+        }
+    except Exception as e:
+        sys.stdout = sys.__stdout__
+        return {"error": f"Python execution error: {str(e)}"}
+
+
 ROLE_DESCRIPTION = (
     "You are the Artisan Coffee Concierge, an AI agent for a specialty coffee shop. "
     "You help customers browse artisan coffee drinks and fresh bakery items, answer questions about flavor notes, "
+    "perform detailed nutritional, calorie, and caffeine data analysis on our Starbucks beverage database using SQL (query_coffee_analytics_db) or Python (execute_coffee_python_analysis), "
     "generate images of menu items, find nearby cafés and geocode customer delivery addresses, "
     "look up coffee brewing guides, convert prices to international currencies, "
     "calculate complex recipes, metrics, or nutritional ratios by executing Python code safely in your sandbox, "
@@ -437,6 +538,8 @@ root_agent = Agent(
     tools=[
         list_menu_items,
         get_menu_item_details,
+        query_coffee_analytics_db,
+        execute_coffee_python_analysis,
         generate_item_image,
         geocode_address,
         find_nearby_places,

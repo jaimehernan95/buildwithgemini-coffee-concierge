@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coffee Concierge ☕</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined">
+<style>
+  :root {
+    --accent: #6f4e37;
+    --accent-light: #8d6e63;
+    --accent-dark: #4a2c11;
+    --bg: #f5f1ed;
+    --card-bg: #ffffff;
+    --border: #e2d7ce;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  header {
+    background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+    color: #fff;
+    padding: .8rem 1.4rem;
+    font-weight: 700;
+    font-size: 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    z-index: 10;
+  }
+  .header-left { display: flex; align-items: center; gap: .75rem; }
+  .header-controls { display: flex; align-items: center; gap: .6rem; }
+
+  /* Language Selector Control */
+  .lang-select-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    padding: .15rem .55rem;
+    color: #fff;
+    font-size: .8rem;
+  }
+  .lang-select-wrapper select {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    padding: .2rem 0;
+  }
+  .lang-select-wrapper select option {
+    background: #3e2723;
+    color: #fff;
+  }
+
+  /* Audio Voice Toggle Button */
+  .btn-voice {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    border-radius: 16px;
+    padding: .35rem .75rem;
+    font-size: .8rem;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    transition: all .2s;
+  }
+  .btn-voice.active {
+    background: #2ecc71;
+    border-color: #27ae60;
+    color: #fff;
+  }
+  .btn-voice:hover { background: rgba(255,255,255,0.32); }
+
+  .btn-reset {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    border-radius: 16px;
+    padding: .35rem .85rem;
+    font-size: .8rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all .2s;
+  }
+  .btn-reset:hover { background: rgba(255,255,255,0.32); }
+
+  /* Main Workspace Layout */
+  .app-container {
+    flex: 1;
+    display: flex;
+    height: calc(100vh - 60px);
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+    background: #fff;
+    box-shadow: 0 0 25px rgba(0,0,0,0.06);
+  }
+
+  /* Left Side: Real Video Persona Stage */
+  .avatar-stage {
+    width: 380px;
+    background: linear-gradient(180deg, #1f1813, #2d231b);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .model-card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  
+  /* Seamless Video Avatar Media with Reliable Fallback */
+  .model-media-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #2b1f17;
+  }
+  .model-video-stream {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 18%;
+    transition: opacity 0.25s ease;
+  }
+  .model-video-stream.speaking {
+    animation: modelTalkAction 0.35s infinite alternate ease-in-out;
+  }
+  @keyframes modelTalkAction {
+    0% { transform: scale(1.01) translateY(0); }
+    50% { transform: scale(1.025) translateY(-2px); }
+    100% { transform: scale(1.018) translateY(1px); }
+  }
+
+  /* Audio waveform overlay */
+  .voice-wave {
+    display: none;
+    align-items: center;
+    gap: 3px;
+    height: 18px;
+    margin-left: 6px;
+  }
+  .voice-wave.active { display: inline-flex; }
+  .voice-bar {
+    width: 3px;
+    height: 100%;
+    background: #00e676;
+    border-radius: 2px;
+    animation: waveBounce 0.8s infinite ease-in-out alternate;
+  }
+  .voice-bar:nth-child(2) { animation-delay: 0.15s; }
+  .voice-bar:nth-child(3) { animation-delay: 0.3s; }
+  .voice-bar:nth-child(4) { animation-delay: 0.45s; }
+  @keyframes waveBounce {
+    0% { height: 4px; }
+    100% { height: 18px; }
+  }
+
+  .model-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1.5rem 1.2rem 1.2rem;
+    background: linear-gradient(to top, rgba(15,10,7,0.96) 0%, rgba(15,10,7,0.7) 65%, transparent 100%);
+    color: #fff;
+    z-index: 2;
+  }
+  .model-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .model-badge .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #00e676;
+    animation: livePulse 1.8s infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+  .model-name {
+    font-size: 1.45rem;
+    font-weight: 800;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+  .model-handle {
+    font-size: 0.85rem;
+    color: #ffcc80;
+    margin: 2px 0 6px;
+  }
+  .model-status-bubble {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    color: #f5f5f5;
+    margin-top: 6px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+  }
+  .btn-swap-barista {
+    margin-top: 10px;
+    width: 100%;
+    background: linear-gradient(135deg, #d7ccc8, #bcaaa4);
+    color: #3e2723;
+    border: none;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    transition: transform .2s, filter .2s;
+  }
+  .btn-swap-barista:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+  }
+
+  /* Right Side: Chat Panel */
+  .chat-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  #log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.2rem;
+    width: 100%;
+  }
+
+  /* Hero Welcome */
+  .hero { text-align: center; padding: 2rem 1rem 1.5rem; color: var(--accent-dark); }
+  .hero-icon { font-size: 3rem; margin-bottom: .3rem; }
+  .hero-title { font-size: 1.45rem; font-weight: 800; margin: 0 0 .4rem; }
+  .hero-desc { font-size: .92rem; color: #7d6f65; max-width: 460px; margin: 0 auto; line-height: 1.5; }
+
+  /* Messages */
+  .msg { margin: .75rem 0; animation: fadeIn .25s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform: translateY(0); } }
+  .msg.user { text-align: right; }
+  .bubble {
+    display: inline-block;
+    padding: .75rem 1.15rem;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid var(--border);
+    text-align: left;
+    max-width: 85%;
+    white-space: pre-wrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    line-height: 1.45;
+  }
+  .msg.user .bubble {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 2px 6px rgba(111,78,55,0.25);
+  }
+  .bubble.rich { background: transparent; border: none; padding: 0; max-width: 100%; white-space: normal; box-shadow: none; }
+  
+  .msg.agent { display: flex; gap: .6rem; align-items: flex-start; }
+  .msg-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    overflow: hidden;
+    margin-top: .2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* Typing Indicator */
+  .typing-indicator { display: flex; align-items: center; gap: 5px; padding: .4rem .2rem; }
+  .typing-indicator span {
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.3s infinite ease-in-out;
+  }
+  .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+  .typing-indicator span:nth-child(2) { animation-delay: .2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1.1); opacity: 1; }
+  }
+
+  /* Prompt Chips */
+  .suggestions {
+    display: flex;
+    gap: .5rem;
+    padding: .5rem 1rem 0;
+    width: 100%;
+    overflow-x: auto;
+  }
+  .chip {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: .4rem .85rem;
+    font-size: .83rem;
+    color: var(--accent-dark);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all .2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+  }
+  .chip:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  /* Form Input & Microphone Button */
+  form {
+    display: flex;
+    gap: .5rem;
+    padding: .8rem 1rem 1rem;
+    border-top: 1px solid var(--border);
+    background: #fff;
+    align-items: center;
+  }
+  input {
+    flex: 1;
+    padding: .75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(111,78,55,0.15);
+  }
+
+  /* Microphone Button */
+  .btn-mic {
+    padding: .65rem .95rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fdfbf7;
+    color: var(--accent);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    transition: all .2s;
+  }
+  .btn-mic:hover {
+    background: #f0eae4;
+    border-color: var(--accent);
+  }
+  .btn-mic.listening {
+    background: #ff4757;
+    color: #fff;
+    border-color: #ff4757;
+    animation: micPulse 1.2s infinite;
+  }
+  @keyframes micPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(255,71,87,0); }
+  }
+
+  button.btn-send {
+    padding: .75rem 1.3rem;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  button.btn-send:hover { background: var(--accent-dark); }
+
+  /* A2UI Component Styles */
+  .a2card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(111,78,55,.08);
+    max-width: 100%;
+    transition: box-shadow .2s ease;
+  }
+  .a2card:hover { box-shadow: 0 6px 14px rgba(111,78,55,.14); }
+  .a2card + .a2card, .a2col > .a2card { margin-top: .75rem; }
+  .a2col { display: flex; flex-direction: column; gap: .4rem; }
+  .a2row { display: flex; flex-direction: row; gap: .6rem; align-items: center; flex-wrap: wrap; }
+  .a2row.between { justify-content: space-between; }
+  .a2text { margin: 0; line-height: 1.45; }
+  .a2text.a2-h1 { font-size: 1.5rem; font-weight: 700; color: var(--accent-dark); }
+  .a2text.a2-h2 { font-size: 1.25rem; font-weight: 700; color: var(--accent-dark); }
+  .a2text.a2-h3 { font-size: 1.1rem; font-weight: 600; color: var(--accent-dark); }
+  .a2text.a2-h4 { font-size: 1rem; font-weight: 600; color: var(--accent-dark); }
+  .a2text.a2-caption { font-size: .85rem; color: #7d6f65; }
+  .a2divider { border: none; border-top: 1px solid var(--border); margin: .5rem 0; width: 100%; }
+  
+  /* Robust image with fallback placeholder styling */
+  .a2img {
+    max-width: 100%;
+    height: 220px;
+    width: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    display: block;
+    background: #efebe9;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  }
+  .material-symbols-outlined { font-family: 'Material Symbols Outlined'; font-size: 1.25rem; line-height: 1; vertical-align: middle; color: var(--accent); }
+
+  @media (max-width: 860px) {
+    .app-container { flex-direction: column; }
+    .avatar-stage { width: 100%; height: 230px; border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <span>☕</span> Coffee Concierge
+  </div>
+  <div class="header-controls">
+    <!-- Language Selector -->
+    <div class="lang-select-wrapper" title="Language for your Barista">
+      <span>🌐</span>
+      <select id="langSelect">
+        <option value="en">English (US)</option>
+        <option value="es">Español (Spanish)</option>
+        <option value="zh">中文 (Chinese)</option>
+        <option value="vi">Tiếng Việt (Vietnamese)</option>
+      </select>
+    </div>
+
+    <!-- Voice TTS Toggle -->
+    <button id="btnVoiceToggle" class="btn-voice active" type="button" title="Toggle audio voice speech">
+      <span id="voiceIcon">🔊</span> <span id="voiceText">Voice On</span>
+    </button>
+
+    <button id="btnReset" class="btn-reset" title="Start a fresh conversation">↻ New Session</button>
+  </div>
+</header>
+
+<div class="app-container">
+  <!-- Left Side: Real Video Persona Stage -->
+  <aside class="avatar-stage">
+    <div class="model-card">
+      <div class="model-media-wrapper">
+        <img id="modelVideoStream" class="model-video-stream" alt="AI Barista Live Stream" src="" />
+      </div>
+
+      <div class="model-overlay">
+        <div class="model-badge">
+          <span class="live-dot"></span> <span id="modelStatusTag">ONLINE • READY</span>
+          <div id="voiceWave" class="voice-wave">
+            <span class="voice-bar"></span>
+            <span class="voice-bar"></span>
+            <span class="voice-bar"></span>
+            <span class="voice-bar"></span>
+          </div>
+        </div>
+        <h2 class="model-name">
+          <span id="modelName">Maya</span>
+          <span style="font-size:1rem;">☕</span>
+        </h2>
+        <div class="model-handle" id="modelHandle">@maya.concierge</div>
+        <div class="model-status-bubble" id="modelStatusBubble">
+          "Hi! I'm Maya. Ready to recommend drinks and customize your order!"
+        </div>
+        <button id="btnSwapModel" class="btn-swap-barista" type="button">
+          🔄 Switch Barista (Maya / Leo)
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right Side: Chat Panel -->
+  <main class="chat-panel">
+    <div id="log">
+      <div id="hero" class="hero">
+        <div class="hero-icon">☕</div>
+        <h2 class="hero-title" id="heroGreeting">Welcome to Coffee Concierge</h2>
+        <p class="hero-desc" id="heroDesc">Your personal AI barista is standing by. Speak via voice or chat to explore artisan roasts or customize an order!</p>
+      </div>
+    </div>
+
+    <div class="suggestions" id="suggestionsContainer">
+      <!-- Chips populated dynamically based on language -->
+    </div>
+
+    <form id="form">
+      <button type="button" id="btnMic" class="btn-mic" title="Click to speak with microphone">
+        🎙️
+      </button>
+      <input id="input" placeholder="Ask about our drinks, find cafes, or order…" autocomplete="off" autofocus>
+      <button class="btn-send" id="btnSend">Send</button>
+    </form>
+  </main>
+</div>
+
+<script>
+const log = document.getElementById("log");
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+const btnMic = document.getElementById("btnMic");
+const langSelect = document.getElementById("langSelect");
+const btnVoiceToggle = document.getElementById("btnVoiceToggle");
+const voiceIcon = document.getElementById("voiceIcon");
+const voiceText = document.getElementById("voiceText");
+const voiceWave = document.getElementById("voiceWave");
+const suggestionsContainer = document.getElementById("suggestionsContainer");
+const modelVideoStream = document.getElementById("modelVideoStream");
+
+let voiceEnabled = true;
+
+// Language Configs with Localization & Prompts
+const LANGUAGES = {
+  en: {
+    code: "en-US",
+    name: "English",
+    placeholder: "Speak or type: ask about drinks, customize orders…",
+    sendText: "Send",
+    heroGreeting: "Welcome to Coffee Concierge",
+    heroDesc: "Your personal AI barista is standing by. Speak via voice or chat to explore artisan roasts or customize an order!",
+    statusOnline: "ONLINE • READY",
+    statusTalking: "SPEAKING • TALKING",
+    greetingMaya: "\"Hi! I'm Maya. Ready to recommend drinks and verify your custom order!\"",
+    greetingLeo: "\"Hey! Leo here. What flavor profile are we exploring today?\"",
+    promptPrefix: "",
+    chips: [
+      { label: "📋 View Menu", prompt: "Show me all espresso and cold brew drinks on the menu" },
+      { label: "✨ Recommend Drink", prompt: "I love smooth floral coffees with no dairy. What do you recommend?" },
+      { label: "🛒 Order Flat White", prompt: "Order a Vanilla Oat Flat White for Alice with oat milk" }
+    ]
+  },
+  es: {
+    code: "es-ES",
+    name: "Español",
+    placeholder: "Habla por micrófono o escribe tu pedido…",
+    sendText: "Enviar",
+    heroGreeting: "Bienvenido a Coffee Concierge",
+    heroDesc: "Tu barista personal de video y voz. ¡Pide en español y confirmaremos cada detalle de tu orden!",
+    statusOnline: "EN LÍNEA • LISTO",
+    statusTalking: "HABLANDO • EN VIVO",
+    greetingMaya: "\"¡Hola! Soy Maya. ¿Qué café te apetece hoy? ¡Puedo hablar español contigo!\"",
+    greetingLeo: "\"¡Buenas! Soy Leo. ¿Qué perfil de tueste y origen te gustaría disfrutar hoy?\"",
+    promptPrefix: "[Please reply in Spanish / Por favor responde en español]: ",
+    chips: [
+      { label: "📋 Ver Menú", prompt: "¿Cuáles son las bebidas disponibles en el menú?" },
+      { label: "✨ Recomendar Café", prompt: "Me gustan los cafés florales y suaves sin lácteos. ¿Qué me recomiendas?" },
+      { label: "🛒 Pedir Flat White", prompt: "Quiero pedir un Vanilla Oat Flat White con leche de avena para Alicia" }
+    ]
+  },
+  zh: {
+    code: "zh-CN",
+    name: "中文",
+    placeholder: "点击麦克风语音或输入文字下单…",
+    sendText: "发送",
+    heroGreeting: "欢迎体验 Coffee Concierge",
+    heroDesc: "您的真人口型视频 AI 咖啡师时刻为您服务。支持中文语音交互与订单复核！",
+    statusOnline: "在线 • 准备就绪",
+    statusTalking: "视频对话中",
+    greetingMaya: "\"您好！我是玛雅（Maya）。今天想喝什么风味的咖啡？我可以为您推荐！\"",
+    greetingLeo: "\"嗨！我是里奥（Leo）。今天想探索哪款产地的手冲或意式风味？\"",
+    promptPrefix: "[Please reply in Mandarin Chinese / 请用中文回答]: ",
+    chips: [
+      { label: "📋 查看饮品菜单", prompt: "请告诉我菜单上所有的意式咖啡和冷萃饮品" },
+      { label: "✨ 推荐花香咖啡", prompt: "我喜欢口感顺滑、带有花香且不含牛奶的咖啡，请推荐一款" },
+      { label: "🛒 订购燕麦白咖啡", prompt: "帮爱丽丝（Alice）订购一杯香草燕麦平白咖啡" }
+    ]
+  },
+  vi: {
+    code: "vi-VN",
+    name: "Tiếng Việt",
+    placeholder: "Bấm micro để nói hoặc nhập yêu cầu cà phê…",
+    sendText: "Gửi",
+    heroGreeting: "Chào mừng đến với Coffee Concierge",
+    heroDesc: "Barista video AI cá nhân luôn sẵn sàng trò chuyện bằng giọng nói tiếng Việt và kiểm tra đơn hàng chuẩn xác!",
+    statusOnline: "TRỰC TUYẾN • SẴN SÀNG",
+    statusTalking: "ĐANG NÓI CHUYỆN",
+    greetingMaya: "\"Xin chào! Mình là Maya. Mình có thể nói tiếng Việt và gợi ý cà phê cho bạn!\"",
+    greetingLeo: "\"Chào bạn! Mình là Leo. Bạn muốn khám phá hương vị cà phê xuất xứ nào hôm nay?\"",
+    promptPrefix: "[Please reply in Vietnamese / Vui lòng trả lời bằng tiếng Việt]: ",
+    chips: [
+      { label: "📋 Xem Thực Đơn", prompt: "Cho tôi xem tất cả đồ uống espresso và cold brew trong thực đơn" },
+      { label: "✨ Gợi Ý Cà Phê", prompt: "Tôi thích cà phê hương hoa dịu nhẹ và không sữa, bạn gợi ý món gì?" },
+      { label: "🛒 Đặt Flat White", prompt: "Đặt một ly Vanilla Oat Flat White sữa yến mạch cho Alice" }
+    ]
+  }
+};
+
+let currentLang = "en";
+
+/* Bespoke Instagram AI Model Personas (Maya & Leo) */
+const MODELS = [
+  {
+    id: "maya",
+    name: "Maya Vance",
+    gender: "female",
+    handle: "@maya.barista",
+    avatarIcon: "/maya_ai_model.jpg",
+    photoIdle: "/maya_ai_model.jpg",
+    photoTalk: "/maya_ai_model_talking.jpg"
+  },
+  {
+    id: "leo",
+    name: "Leo Mercer",
+    gender: "male",
+    handle: "@leo.craftcoffee",
+    avatarIcon: "/leo_ai_model.jpg",
+    photoIdle: "/leo_ai_model.jpg",
+    photoTalk: "/leo_ai_model_talking.jpg"
+  }
+];
+
+let modelIdx = Math.random() < 0.5 ? 0 : 1;
+
+function setVideoPersona() {
+  const m = MODELS[modelIdx];
+  modelVideoStream.src = m.photoIdle;
+}
+
+function renderChips() {
+  const lang = LANGUAGES[currentLang];
+  suggestionsContainer.innerHTML = "";
+  lang.chips.forEach(c => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "chip";
+    btn.textContent = c.label;
+    btn.setAttribute("data-prompt", c.prompt);
+    btn.addEventListener("click", () => {
+      input.value = c.prompt;
+      form.dispatchEvent(new Event("submit"));
+    });
+    suggestionsContainer.appendChild(btn);
+  });
+}
+
+function updateLanguageUI() {
+  const lang = LANGUAGES[currentLang];
+  langSelect.value = currentLang;
+  input.placeholder = lang.placeholder;
+  document.getElementById("btnSend").textContent = lang.sendText;
+  const heroGreet = document.getElementById("heroGreeting");
+  if (heroGreet) heroGreet.textContent = lang.heroGreeting;
+  const heroDesc = document.getElementById("heroDesc");
+  if (heroDesc) heroDesc.textContent = lang.heroDesc;
+  renderChips();
+  updateModelUI("idle");
+}
+
+langSelect.addEventListener("change", (e) => {
+  currentLang = e.target.value;
+  updateLanguageUI();
+});
+
+// Automatic Language Detector for Natural User Inputs
+function detectLanguageFromText(text) {
+  const lower = text.toLowerCase();
+  
+  if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(text) ||
+      /\b(xin chào|cà phê|cảm ơn|cho tôi|bạn có|thực đơn|tiếng việt)\b/i.test(lower)) {
+    return "vi";
+  }
+  
+  if (/[\u4e00-\u9fa5]/.test(text) || /\b(你好|咖啡|菜单|谢谢|推荐|中文)\b/i.test(lower)) {
+    return "zh";
+  }
+  
+  if (/[áéíóúñ¿¡]/i.test(text) ||
+      /\b(hola|café|bebida|gracias|menú|por favor|hablas|español|quiero|buenas)\b/i.test(lower)) {
+    return "es";
+  }
+
+  if (/\b(speak spanish|habla español|en español)\b/i.test(lower)) return "es";
+  if (/\b(speak vietnamese|nói tiếng việt|bằng tiếng việt)\b/i.test(lower)) return "vi";
+  if (/\b(speak chinese|说中文|讲中文)\b/i.test(lower)) return "zh";
+  if (/\b(speak english|in english)\b/i.test(lower)) return "en";
+
+  return null;
+}
+
+// Voice Toggle logic
+btnVoiceToggle.addEventListener("click", () => {
+  voiceEnabled = !voiceEnabled;
+  if (voiceEnabled) {
+    btnVoiceToggle.classList.add("active");
+    voiceIcon.textContent = "🔊";
+    voiceText.textContent = "Voice On";
+  } else {
+    btnVoiceToggle.classList.remove("active");
+    voiceIcon.textContent = "🔇";
+    voiceText.textContent = "Voice Off";
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    stopSpeakingUI();
+  }
+});
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function updateModelUI(state = "idle") {
+  const m = MODELS[modelIdx];
+  const lang = LANGUAGES[currentLang];
+  const nameEl = document.getElementById("modelName");
+  const handleEl = document.getElementById("modelHandle");
+  const tagEl = document.getElementById("modelStatusTag");
+  const bubbleEl = document.getElementById("modelStatusBubble");
+
+  nameEl.textContent = m.name;
+  handleEl.textContent = m.handle;
+
+  if (state === "talking") {
+    modelVideoStream.src = m.photoTalk;
+    modelVideoStream.classList.add("speaking");
+    tagEl.textContent = lang.statusTalking;
+    tagEl.style.color = "#ffeb3b";
+    voiceWave.classList.add("active");
+  } else {
+    modelVideoStream.src = m.photoIdle;
+    modelVideoStream.classList.remove("speaking");
+    tagEl.textContent = lang.statusOnline;
+    tagEl.style.color = "#fff";
+    voiceWave.classList.remove("active");
+    bubbleEl.textContent = m.id === "maya" ? lang.greetingMaya : lang.greetingLeo;
+  }
+}
+
+function stopSpeakingUI() {
+  updateModelUI("idle");
+}
+
+/* Web Speech Synthesis (TTS) Engine */
+function speakText(text) {
+  if (!voiceEnabled || !window.speechSynthesis) return;
+
+  let cleanText = text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/\$\d+(\.\d+)?/g, (m) => m)
+    .replace(/\n+/g, " ")
+    .trim();
+
+  if (!cleanText) return;
+
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  const langConfig = LANGUAGES[currentLang];
+  utterance.lang = langConfig.code;
+
+  const voices = window.speechSynthesis.getVoices();
+  const m = MODELS[modelIdx];
+  let matchedVoice = voices.find(v => v.lang.startsWith(langConfig.code.slice(0, 2)) && 
+    (m.gender === "female" ? /female|woman|girl|samantha|zira|victoria|monica|mei-jia|lin/i.test(v.name) : /male|man|guy|david|george|diego|ting-ting|nam/i.test(v.name)));
+  
+  if (!matchedVoice) {
+    matchedVoice = voices.find(v => v.lang.startsWith(langConfig.code.slice(0, 2)));
+  }
+  if (matchedVoice) utterance.voice = matchedVoice;
+
+  utterance.pitch = m.gender === "female" ? 1.05 : 0.95;
+  utterance.rate = 1.0;
+
+  utterance.onstart = () => {
+    updateModelUI("talking");
+  };
+  utterance.onend = () => {
+    stopSpeakingUI();
+  };
+  utterance.onerror = () => {
+    stopSpeakingUI();
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+if (typeof window !== "undefined" && window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
+}
+
+/* Web Speech Recognition (Microphone Speech-to-Text) */
+let recognition = null;
+let isRecording = false;
+
+if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRec();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    isRecording = true;
+    btnMic.classList.add("listening");
+    btnMic.innerHTML = "⏹️";
+    input.placeholder = "Listening... please speak now!";
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    input.value = transcript;
+    form.dispatchEvent(new Event("submit"));
+  };
+
+  recognition.onerror = (event) => {
+    console.warn("Speech recognition error:", event.error);
+    stopMic();
+  };
+
+  recognition.onend = () => {
+    stopMic();
+  };
+} else {
+  btnMic.title = "Speech recognition is not supported in this browser.";
+}
+
+function stopMic() {
+  isRecording = false;
+  btnMic.classList.remove("listening");
+  btnMic.innerHTML = "🎙️";
+  input.placeholder = LANGUAGES[currentLang].placeholder;
+}
+
+btnMic.addEventListener("click", () => {
+  if (!recognition) {
+    alert("Speech recognition is not supported by your browser. Please try Chrome.");
+    return;
+  }
+  if (isRecording) {
+    recognition.stop();
+  } else {
+    // Set recognition language to current selected language
+    recognition.lang = LANGUAGES[currentLang].code;
+    try {
+      recognition.start();
+    } catch (e) {
+      console.warn("Recognition start error:", e);
+    }
+  }
+});
+
+document.getElementById("btnSwapModel").addEventListener("click", () => {
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  modelIdx = (modelIdx + 1) % MODELS.length;
+  setVideoPersona();
+  updateModelUI("idle");
+});
+
+function bubble(who) {
+  const hero = document.getElementById("hero");
+  if (hero) hero.remove();
+  const m = el("div", "msg " + who);
+  if (who === "agent") {
+    const avDiv = el("div", "msg-avatar");
+    const img = document.createElement("img");
+    img.src = MODELS[modelIdx].avatarIcon;
+    img.alt = MODELS[modelIdx].name;
+    avDiv.appendChild(img);
+    m.appendChild(avDiv);
+  }
+  const b = el("div", "bubble");
+  m.appendChild(b);
+  log.appendChild(m);
+  log.scrollTop = log.scrollHeight;
+  return b;
+}
+
+let currentUserId = "user-" + Math.random().toString(36).slice(2, 9);
+
+document.getElementById("btnReset").addEventListener("click", () => {
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  currentUserId = "user-" + Math.random().toString(36).slice(2, 9);
+  modelIdx = Math.random() < 0.5 ? 0 : 1;
+  const lang = LANGUAGES[currentLang];
+  log.innerHTML = `
+    <div id="hero" class="hero">
+      <div class="hero-icon">☕</div>
+      <h2 class="hero-title" id="heroGreeting">${lang.heroGreeting}</h2>
+      <p class="hero-desc" id="heroDesc">${lang.heroDesc}</p>
+    </div>
+  `;
+  setVideoPersona();
+  updateModelUI("idle");
+  input.focus();
+});
+
+// Initialize UI
+setVideoPersona();
+updateLanguageUI();
+
+/* ----------------------------------------------------------------------------
+ * A2UI mini-renderer (v0.8 Basic Catalog subset).
+ * -------------------------------------------------------------------------- */
+function boundStr(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v.literalString === "string") return v.literalString;
+  return "";
+}
+
+function childIds(props) {
+  const ids = [];
+  if (props && typeof props.child === "string") ids.push(props.child);
+  const ch = props && props.children;
+  if (ch && Array.isArray(ch.explicitList)) for (const c of ch.explicitList) if (typeof c === "string") ids.push(c);
+  return ids;
+}
+
+function buildNode(id, comps, visited) {
+  if (!id || visited.has(id)) return null;
+  visited.add(id);
+  const def = comps[id];
+  if (!def || !def.component) return null;
+  const c = def.component;
+
+  if (c.Card) {
+    const card = el("div", "a2card");
+    for (const cid of childIds(c.Card)) {
+      const ch = buildNode(cid, comps, visited);
+      if (ch) card.appendChild(ch);
+    }
+    return card;
+  }
+  if (c.Column) {
+    const col = el("div", "a2col");
+    for (const cid of childIds(c.Column)) {
+      const ch = buildNode(cid, comps, visited);
+      if (ch) col.appendChild(ch);
+    }
+    return col;
+  }
+  if (c.Row) {
+    const row = el("div", "a2row");
+    if (c.Row.distribution === "spaceBetween") row.classList.add("between");
+    for (const cid of childIds(c.Row)) {
+      const ch = buildNode(cid, comps, visited);
+      if (ch) row.appendChild(ch);
+    }
+    return row;
+  }
+  if (c.List) {
+    const col = el("div", "a2col");
+    for (const cid of childIds(c.List)) {
+      const ch = buildNode(cid, comps, visited);
+      if (ch) col.appendChild(ch);
+    }
+    return col;
+  }
+  if (c.Text) {
+    const t = el("p", "a2text", boundStr(c.Text.text));
+    const h = c.Text.usageHint;
+    if (h === "h1") t.className = "a2text a2-h1";
+    else if (h === "h2") t.className = "a2text a2-h2";
+    else if (h === "h3") t.className = "a2text a2-h3";
+    else if (h === "h4") t.className = "a2text a2-h4";
+    else if (h === "caption") t.className = "a2text a2-caption";
+    return t;
+  }
+  if (c.Divider) return el("hr", "a2divider");
+  if (c.Image) {
+    const url = boundStr(c.Image.url);
+    if (!url || !/^https?:\/\//i.test(url)) return null;
+    const img = el("img", "a2img");
+    img.src = url;
+    img.alt = boundStr(c.Image.altText) || "Coffee item";
+    img.onerror = () => {
+      img.src = "https://images.unsplash.com/photo-1509785307050-d4066910ec1e?auto=format&fit=crop&w=600&q=80";
+    };
+    return img;
+  }
+  if (c.Icon) {
+    const name = boundStr(c.Icon.name);
+    return el("span", "material-symbols-outlined", name);
+  }
+  return null;
+}
+
+function renderSurface(messages, container) {
+  const comps = {};
+  for (const m of messages) {
+    const su = m && m.surfaceUpdate;
+    if (!su || !Array.isArray(su.components)) continue;
+    for (const entry of su.components) {
+      if (entry && entry.id && entry.component) comps[entry.id] = entry;
+    }
+  }
+  if (!Object.keys(comps).length) return false;
+  const rootIds = [];
+  if (comps.root) rootIds.push("root");
+  for (const id of Object.keys(comps)) {
+    if (id !== "root" && comps[id].component && comps[id].component.Card) rootIds.push(id);
+  }
+  if (!rootIds.length && comps[Object.keys(comps)[0]]) rootIds.push(Object.keys(comps)[0]);
+
+  let drew = false;
+  for (const rid of rootIds) {
+    const node = buildNode(rid, comps, new Set());
+    if (node) { container.appendChild(node); drew = true; }
+  }
+  return drew;
+}
+
+function flattenText(messages) {
+  const out = [];
+  for (const m of messages) {
+    const su = m.surfaceUpdate;
+    if (su && Array.isArray(su.components)) {
+      for (const c of su.components) {
+        if (c && c.component && c.component.Text) out.push(boundStr(c.component.Text.text));
+      }
+    }
+  }
+  return out.join("\n").trim();
+}
+
+function renderReply(b, parts) {
+  b.textContent = "";
+  const texts = parts.filter(p => p && (p.kind === "text" || (!p.kind && p.text))).map(p => p.text || "");
+  const a2ui = parts.filter(p => p && p.kind === "a2ui" && p.data).map(p => p.data);
+
+  const textStr = texts.join("\n").trim();
+  if (textStr) b.appendChild(el("div", null, textStr));
+
+  if (a2ui.length) {
+    b.classList.add("rich");
+    if (!renderSurface(a2ui, b)) b.appendChild(el("div", null, flattenText(a2ui) || "(no card content)"));
+  }
+  if (!b.childNodes.length) b.textContent = "(no response)";
+  log.scrollTop = log.scrollHeight;
+
+  // Speak and trigger mouth movement in video!
+  if (textStr) {
+    document.getElementById("modelStatusBubble").textContent = `"${textStr.slice(0, 110)}${textStr.length > 110 ? '…' : ''}"`;
+    speakText(textStr);
+  }
+}
+
+// Chat Form Submit with Accent Corrector & Order Reviser Guidance
+form.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const rawText = input.value.trim();
+  if (!rawText) return;
+
+  const detected = detectLanguageFromText(rawText);
+  if (detected && detected !== currentLang) {
+    currentLang = detected;
+    updateLanguageUI();
+  }
+
+  bubble("user").textContent = rawText;
+  input.value = "";
+
+  const langConfig = LANGUAGES[currentLang];
+  
+  // Order Reviser & Accent Corrector System Instruction prefix
+  const correctorGuidance = 
+    `[SYSTEM DIRECTIVE FOR AGENT]: 
+1. Language: Reply in ${langConfig.name} (${langConfig.code}).
+2. Accent / Speech Reviser & Order Clarification:
+   The customer may speak with an accent, dialect, speech-to-text typo, or imperfect translation.
+   - If the customer asks for a drink or food, carefully verify and confirm what they meant (e.g. "Just to make sure I got that right, you would like a Vanilla Oat Flat White with oat milk, correct?").
+   - If their request is ambiguous or unclear due to translation or accent, DO NOT guess blindly or fail. Kindly ask them in a friendly, gentle way to clarify (e.g. "I want to make sure I don't get your order wrong—did you mean our Classic Cortado or our Pour-Over?").
+   - Always confirm key order details (drink name, customer name, milk/temperature preferences).
+
+Customer message: `;
+
+  const queryPayload = `${correctorGuidance}${rawText}`;
+
+  updateModelUI("talking");
+
+  const b = bubble("agent");
+  b.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: queryPayload, user_id: currentUserId })
+    });
+
+    const raw = await res.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      throw new Error(`Server returned non-JSON (HTTP ${res.status}): ${raw.slice(0, 300)}`);
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    renderReply(b, data.parts || []);
+  } catch (e) {
+    console.error("Chat error:", e);
+    b.textContent = "Error: " + e.message;
+    stopSpeakingUI();
+  }
+});
+</script>
+</body>
+</html>
